@@ -27,7 +27,7 @@ quanllm-cli-dist/
 2. 运行 `quanllm-cli`（Windows 双击 `quanllm-cli.exe`）。
 3. 直接输入问题开始对话；`:sessions` / `:load` / `:clear` / `:quit` 管理会话。
 
-程序内不含任何密钥；密钥只从同目录的 `APIKEY` 文件读取。
+程序内不含任何密钥；密钥只会从同目录下的 `APIKEY` 文件读取。
 
 ## 注意事项
 

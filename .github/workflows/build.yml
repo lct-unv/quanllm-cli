@@ -44,7 +44,13 @@ jobs:
           mkdir -p "release/$pkg"
           cp "dist/${{ matrix.bin }}" "release/$pkg/"
           cp APIKEY.example 使用说明.txt "release/$pkg/"
-          cd release && tar -a -cf "$pkg.zip" "$pkg"
+          cd release
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            # Windows 运行器的 git-bash 没有 zip，GNU tar 也不支持 zip 格式，改用 PowerShell
+            powershell -NoProfile -Command "Compress-Archive -Path '$pkg' -DestinationPath '$pkg.zip'"
+          else
+            zip -r "$pkg.zip" "$pkg"
+          fi
 
       - uses: actions/upload-artifact@v4
         with:

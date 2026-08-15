@@ -1,0 +1,7 @@
+releases/
+dist*/
+.build-venv/
+__pycache__/
+.DS_Store
+APIKEY
+chat_history.jsonl

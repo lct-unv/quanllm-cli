@@ -1,0 +1,22 @@
+QuanLLM CLI 使用说明
+====================
+
+1. 将本文件夹中的 APIKEY.example 重命名为 APIKEY（或新建一个名为 APIKEY 的文件），
+   打开后把你的 API Key 粘贴进去，单独一行，不要加引号。
+   （首次直接运行程序也会自动生成 APIKEY 模板文件。）
+
+2. 运行程序：
+   - Windows：双击 quanllm-cli.exe，或在命令行中运行
+   - macOS / Linux：在终端中执行  ./quanllm-cli
+     （macOS 首次运行如提示"无法验证开发者"，请到 系统设置 → 隐私与安全性 中点击"仍要打开"，
+      或先在终端执行 xattr -d com.apple.quarantine quanllm-cli）
+
+3. 对话指令：
+   :sessions      查看历史会话列表
+   :load [编号]   恢复最近一次 / 指定编号的会话
+   :clear         清空上下文，开始新会话
+   :quit          退出
+
+4. 对话历史会自动保存在程序同目录的 chat_history.jsonl 中。
+
+5. APIKEY 与 chat_history.jsonl 都必须与程序放在同一目录下。

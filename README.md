@@ -1,6 +1,6 @@
 # QuanLLM CLI 分发包
 
-量子力学专家模型 QuanLLM 的命令行客户端。流式输出、思考模式可见、SymPy 符号计算工具调用、多轮对话与历史会话持久化。**开盒即用，无需安装 Python。**
+量子力学专家模型 QuanLLM-qm 的命令行客户端。流式输出、思考模式可见、SymPy 符号计算工具调用、多轮对话与历史会话持久化。**开盒即用，无需安装 Python。**
 
 ## 目录结构
 
@@ -29,30 +29,10 @@ quanllm-cli-dist/
 
 程序内不含任何密钥；密钥只从同目录的 `APIKEY` 文件读取。
 
-## 维护者侧：产出各平台安装包
-
-PyInstaller 不支持跨平台编译，各平台包必须在对应系统上构建，两种方式任选：
-
-**方式一：GitHub Actions（推荐，一次出四个平台）**
-
-把本目录推送到 GitHub 仓库，在 Actions 页面手动运行 `build-cli` 工作流（或打一个 `v*` 标签），
-几分钟后再 Artifacts 里下载：
-
-- `quanllm-cli-linux-x86_64.zip`
-- `quanllm-cli-windows-x86_64.zip`
-- `quanllm-cli-macos-arm64.zip`
-- `quanllm-cli-macos-x86_64.zip`
-
-每个 zip 内含可执行文件 + APIKEY.example + 使用说明.txt，解压即用。
-
-**方式二：本机构建**
-
-- macOS / Linux：`bash scripts/build_unix.sh`，产物在 `dist/quanllm-cli`
-- Windows：双击 `scripts/build_windows.bat`，产物在 `dist/quanllm-cli.exe`
 
 ## 注意事项
 
-- macOS 分发给他人时，首次运行可能提示"无法验证开发者"：在终端执行
+- macOS 版本的首次运行可能提示"无法验证开发者"：在终端执行
   `xattr -d com.apple.quarantine quanllm-cli` 即可（未做 Apple 开发者签名）。
 - Windows  Defender / SmartScreen 可能对未签名 exe 弹提示，属正常现象。
-- Linux 版请在 glibc 较新的发行版（Ubuntu 20.04+ 等）上构建或运行。
+- Linux 版请在 glibc 较新的发行版（Ubuntu 20.04+ 等）上运行。

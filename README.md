@@ -29,10 +29,15 @@ quanllm-cli-dist/
 
 程序内不含任何密钥；密钥只从同目录的 `APIKEY` 文件读取。
 
-
 ## 注意事项
 
 - macOS 版本的首次运行可能提示"无法验证开发者"：在终端执行
   `xattr -d com.apple.quarantine quanllm-cli` 即可（未做 Apple 开发者签名）。
 - Windows  Defender / SmartScreen 可能对未签名 exe 弹提示，属正常现象。
 - Linux 版请在 glibc 较新的发行版（Ubuntu 20.04+ 等）上运行。
+
+## 许可证
+
+本仓库代码以 [MIT License](LICENSE) 开源，版权归 MeaWorm Corp. 所有。
+
+注意：**QuanLLM 名称、标识及相关品牌资产不在 MIT 许可证的授权范围内**。你可以自由使用、修改和再分发本代码，但不得以 QuanLLM 名义或可能造成混淆的方式分发修改版本。

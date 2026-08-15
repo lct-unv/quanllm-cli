@@ -20,9 +20,6 @@ jobs:
           - os: macos-14
             target: macos-arm64
             bin: quanllm-cli
-          - os: macos-13
-            target: macos-x86_64
-            bin: quanllm-cli
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

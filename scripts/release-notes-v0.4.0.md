@@ -4,8 +4,8 @@
 
 ### 本版更新
 
-- 每轮对话实时显示 Token 用量：本轮 / 本会话累计 / 网关累计
-- 网关累计直接给出 Token 数（输入/输出分开），统计自 Key 创建以来的全部消耗、含其他设备，与网关后台一致（基于网关消费日志求和，覆盖最近 1000 次请求；查询失败时回退为本机累计）
+- 每轮对话实时显示 Token 用量：本轮 / 本会话累计 / 本机累计
+- 本机累计按 API Key 分别统计并持久化在 `usage_stats.json`，记录该 Key 在本设备上自首次使用以来的输入/输出 Token 总量（换设备重新计数；全量账单以网关后台为准）
 - API Key 额度耗尽（429）时给出明确中文提示
 - 网关地址不再明文出现在源码中，且固定内置、不提供切换入口
 - `:clear` 开启新会话时本会话累计自动归零
@@ -41,8 +41,8 @@ The self-adaptive CLI client for QuanLLM, the expert model for quantum mechanics
 
 ### What's New
 
-- Real-time token usage after each reply: this round / session totals / gateway totals
-- Gateway totals are shown as token counts (input and output separately), covering all consumption since the key was created, including other devices — consistent with the gateway console (summed from the gateway's consumption logs, covering the most recent 1000 requests; falls back to local machine totals if the query fails)
+- Real-time token usage after each reply: this round / session totals / machine totals
+- Machine totals are counted per API key and persisted in `usage_stats.json`, tracking this key's input/output tokens on this device since first use (each device counts independently; the gateway console remains the authoritative billing record)
 - Clear Chinese error message when the API key runs out of quota (HTTP 429)
 - Gateway address no longer appears in plaintext in the source code; it is fixed at build time with no override option
 - Session token counters reset automatically when `:clear` starts a new session

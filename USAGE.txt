@@ -19,8 +19,8 @@ QuanLLM CLI 使用说明
 
 4. 对话历史会自动保存在程序同目录的 chat_history.jsonl 中。
 
-5. 每轮回答后会显示 Token 用量：本轮、本会话累计、本机累计（自首次使用起，
-   按 API Key 分别统计，记录在程序同目录的 usage_stats.json 中）。
+5. 每轮回答后会显示 Token 用量：本轮、本会话累计、网关累计（自 Key 创建起的
+   输入/输出 Token 总数，含其他设备；查询失败时回退为本机累计）。
 
 6. APIKEY 与 chat_history.jsonl 都必须与程序放在同一目录下。
 
@@ -50,8 +50,9 @@ QuanLLM CLI — Instructions
    in the same directory as the program.
 
 5. Token usage is shown after each reply: this round, session totals,
-   and local lifetime totals (counted per API Key since first use,
-   recorded in usage_stats.json next to the program).
+   and gateway totals (input/output tokens since the key was created,
+   including other devices; falls back to local machine totals if the
+   query fails).
 
 6. Both APIKEY and chat_history.jsonl must stay in the same directory
    as the program.

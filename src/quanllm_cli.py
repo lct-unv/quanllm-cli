@@ -192,36 +192,30 @@ def bump_lifetime_usage(prompt: int, completion: int) -> dict:
     return entry
 
 
-def query_token_quota() -> dict:
-    """查询当前 Key 在网关侧的额度用量（new-api 的 /api/usage/token/ 接口，
-    统计自 Key 创建以来的全部消耗，含其他设备；失败时返回 None，不影响对话）。"""
+def query_gateway_usage() -> dict:
+    """查询当前 Key 在网关侧的累计 Token 用量（new-api 的 /api/log/token 接口，
+    用 sk-token 自助查询该 Key 的全部消费日志并求和，含其他设备上的用量；
+    网关上最多返回最近 1000 条日志。失败时返回 None，不影响对话）。"""
     import urllib.request
     base = load_base_url()
     root = base[:-3] if base.endswith("/v1") else base  # 去掉 /v1 得到网关根地址
     req = urllib.request.Request(
-        root + "/api/usage/token/",
+        root + "/api/log/token",
         headers={"Authorization": f"Bearer {API_KEY}", "Accept": "application/json"},
     )
     try:
         with urllib.request.urlopen(req, timeout=8) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-        if data.get("code") or data.get("success"):
-            return data.get("data") or {}
+        if not data.get("success"):
+            return None
+        logs = data.get("data") or []
+        return {
+            "prompt": sum(l.get("prompt_tokens", 0) for l in logs),
+            "completion": sum(l.get("completion_tokens", 0) for l in logs),
+        }
     except Exception:
         pass
     return None
-
-
-def format_quota(data: dict) -> str:
-    """把网关额度数据格式化成一行展示文本。"""
-    if not data:
-        return ""
-    used = data.get("total_used", 0)
-    if data.get("unlimited_quota"):
-        return f"已用额度 {used}（不限总额）"
-    granted = data.get("total_granted", 0)
-    available = data.get("total_available", granted - used)
-    return f"已用额度 {used} / 总额 {granted}（剩余 {available}）"
 
 
 def stream_request(messages, use_tools: bool = False) -> dict:
@@ -298,13 +292,16 @@ def stream_request(messages, use_tools: bool = False) -> dict:
         SESSION_USAGE["prompt"] += prompt
         SESSION_USAGE["completion"] += completion
         lifetime = bump_lifetime_usage(prompt, completion)
-        print(f"[Token] 本轮 输入 {prompt} · 输出 {completion}"
-              f" ｜ 本会话累计 输入 {SESSION_USAGE['prompt']} · 输出 {SESSION_USAGE['completion']}"
-              f" ｜ 本机累计 输入 {lifetime['prompt']} · 输出 {lifetime['completion']}"
-              f"（自 {lifetime['since'][:10]} 起）")
-        quota_text = format_quota(query_token_quota())
-        if quota_text:
-            print(f"[额度] 网关累计 {quota_text}")
+        gateway = query_gateway_usage()
+        if gateway:
+            print(f"[Token] 本轮 输入 {prompt} · 输出 {completion}"
+                  f" ｜ 本会话累计 输入 {SESSION_USAGE['prompt']} · 输出 {SESSION_USAGE['completion']}"
+                  f" ｜ 网关累计 输入 {gateway['prompt']} · 输出 {gateway['completion']}（自创建起）")
+        else:
+            print(f"[Token] 本轮 输入 {prompt} · 输出 {completion}"
+                  f" ｜ 本会话累计 输入 {SESSION_USAGE['prompt']} · 输出 {SESSION_USAGE['completion']}"
+                  f" ｜ 本机累计 输入 {lifetime['prompt']} · 输出 {lifetime['completion']}"
+                  f"（自 {lifetime['since'][:10]} 起，网关统计暂不可用）")
         log_event({
             "type": "usage",
             "time": datetime.now().isoformat(timespec="seconds"),
@@ -472,11 +469,9 @@ def main():
     print("QuanLLM-qm · 量子力学专家模型 CLI（流式 + 思考模式 + SymPy 工具）")
     print("输入问题进行对话；:sessions 查看历史会话，:load [编号] 恢复会话，:clear 清空上下文，:quit 退出。")
     print(f"历史记录保存在 {HISTORY_FILE}")
-    quota_data = query_token_quota()
+    quota_data = query_gateway_usage()
     if quota_data:
-        name = quota_data.get("name") or ""
-        quota_text = format_quota(quota_data)
-        print(f"[额度] Key「{name}」{quota_text}（网关统计，自创建起）")
+        print(f"[Token] 网关累计 输入 {quota_data['prompt']} · 输出 {quota_data['completion']}（自 Key 创建起，含其他设备）")
     print()
 
     while True:

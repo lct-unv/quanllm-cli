@@ -1,3 +1,6 @@
+import base64
+import hashlib
+
 from openai import OpenAI
 import sympy as sp
 import json
@@ -35,23 +38,14 @@ def load_api_key() -> str:
 
 
 def load_base_url() -> str:
-    """网关地址：默认内置（混淆存储，避免源码明文暴露）；
-    如需切换网关，可在 APIKEY 文件中加一行 BASE_URL=http://... 覆盖。"""
-    key_path = os.path.join(base_dir(), "APIKEY")
-    try:
-        with open(key_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("BASE_URL="):
-                    return line[len("BASE_URL="):].strip()
-    except OSError:
-        pass
-    import base64
+    """网关地址：固定内置（混淆存储，避免源码明文暴露），不提供切换入口。"""
     return base64.b64decode("aHR0cDovLzQ3Ljk3LjQ2Ljc0OjMwMDAvdjE=").decode("ascii")
 
 
+API_KEY = load_api_key()
+
 client = OpenAI(
-    api_key=load_api_key(),
+    api_key=API_KEY,
     base_url=load_base_url()
 )
 
@@ -165,6 +159,39 @@ tools = [
 # 本会话 Token 用量累计（网关 usage 字段回填）
 SESSION_USAGE = {"prompt": 0, "completion": 0}
 
+# 当前 API Key 的标识（不存储 Key 本体，仅存其散列前缀，用于按 Key 区分累计用量）
+KEY_ID = hashlib.sha256(API_KEY.encode("utf-8")).hexdigest()[:16]
+
+# Key 级累计用量持久化文件（本机统计），保存在程序同目录
+USAGE_STATS_FILE = os.path.join(base_dir(), "usage_stats.json")
+
+
+def bump_lifetime_usage(prompt: int, completion: int) -> dict:
+    """把本轮用量累加进当前 Key 的本机持久化累计，并返回该 Key 的累计记录。
+
+    注意：网关不向 sk-token 开放自助用量查询，这里统计的是本机自首次使用以来的
+    累计值；该 Key 在其他设备/工具上的用量不计入。
+    """
+    try:
+        with open(USAGE_STATS_FILE, "r", encoding="utf-8") as f:
+            store = json.load(f)
+    except (OSError, ValueError):
+        store = {}
+    entry = store.get(KEY_ID) or {
+        "prompt": 0,
+        "completion": 0,
+        "since": datetime.now().isoformat(timespec="seconds"),
+    }
+    entry["prompt"] += prompt
+    entry["completion"] += completion
+    store[KEY_ID] = entry
+    try:
+        with open(USAGE_STATS_FILE, "w", encoding="utf-8") as f:
+            json.dump(store, f, ensure_ascii=False)
+    except OSError:
+        pass  # 写失败不影响对话
+    return entry
+
 
 def stream_request(messages, use_tools: bool = False) -> dict:
     """
@@ -233,14 +260,17 @@ def stream_request(messages, use_tools: bool = False) -> dict:
 
     print()  # 流式输出结束后换行
 
-    # 打印本轮 Token 用量并累计到会话级
+    # 打印本轮 Token 用量，并累计到会话级与 Key 级（本机持久化）
     if usage_info:
         prompt = usage_info.prompt_tokens or 0
         completion = usage_info.completion_tokens or 0
         SESSION_USAGE["prompt"] += prompt
         SESSION_USAGE["completion"] += completion
+        lifetime = bump_lifetime_usage(prompt, completion)
         print(f"[Token] 本轮 输入 {prompt} · 输出 {completion}"
-              f" ｜ 本会话累计 输入 {SESSION_USAGE['prompt']} · 输出 {SESSION_USAGE['completion']}")
+              f" ｜ 本会话累计 输入 {SESSION_USAGE['prompt']} · 输出 {SESSION_USAGE['completion']}"
+              f" ｜ 本机累计 输入 {lifetime['prompt']} · 输出 {lifetime['completion']}"
+              f"（自 {lifetime['since'][:10]} 起）")
         log_event({
             "type": "usage",
             "time": datetime.now().isoformat(timespec="seconds"),

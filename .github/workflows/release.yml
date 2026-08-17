@@ -1,0 +1,63 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "目标 Release 的 tag（须已在 GitHub 上创建），如 v0.4.0"
+        required: true
+      version:
+        description: "文件名中的版本号，如 v0.4.0"
+        required: true
+
+jobs:
+  build-upload:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x86_64
+            bin: quanllm-cli
+          - os: windows-latest
+            target: windows-x86_64
+            bin: quanllm-cli.exe
+          - os: macos-14
+            target: macos-arm64
+            bin: quanllm-cli
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install openai sympy pyinstaller
+
+      - name: Build executable
+        run: pyinstaller --onefile --name quanllm-cli --clean --noconfirm src/quanllm_cli.py
+
+      - name: Package release
+        shell: bash
+        run: |
+          pkg="quanllm-cli-${{ inputs.version }}-${{ matrix.target }}"
+          mkdir -p "release/$pkg"
+          cp "dist/${{ matrix.bin }}" "release/$pkg/"
+          cp APIKEY.example USAGE.txt "release/$pkg/"
+          cd release
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            # Windows 运行器自带 7z，打出的 zip 路径分隔符跨平台兼容
+            7z a "$pkg.zip" "$pkg" >/dev/null
+          else
+            zip -r "$pkg.zip" "$pkg"
+          fi
+
+      - name: Upload asset to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ inputs.tag }}" "release/quanllm-cli-${{ inputs.version }}-${{ matrix.target }}.zip"

@@ -9,6 +9,10 @@ on:
       version:
         description: "文件名中的版本号，如 v0.4.0"
         required: true
+      ref:
+        description: "构建所用的 git 引用（默认 main；补历史版本时填对应 tag）"
+        required: true
+        default: "main"
 
 jobs:
   build-upload:
@@ -30,6 +34,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
 
       - uses: actions/setup-python@v5
         with:
@@ -47,7 +53,9 @@ jobs:
           pkg="quanllm-cli-${{ inputs.version }}-${{ matrix.target }}"
           mkdir -p "release/$pkg"
           cp "dist/${{ matrix.bin }}" "release/$pkg/"
-          cp APIKEY.example USAGE.txt "release/$pkg/"
+          cp APIKEY.example "release/$pkg/"
+          # 说明文件在不同版本中可能叫 USAGE.txt 或 使用说明.txt
+          cp USAGE.txt "release/$pkg/" 2>/dev/null || cp 使用说明.txt "release/$pkg/"
           cd release
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             # Windows 运行器自带 7z，打出的 zip 路径分隔符跨平台兼容

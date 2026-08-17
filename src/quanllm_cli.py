@@ -36,10 +36,11 @@ def load_api_key() -> str:
 
 client = OpenAI(
     api_key=load_api_key(),
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+    #base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+    base_url="http://47.97.46.74:3000/v1"
 )
 
-MODEL = "qwen3-8b-7801b26b3ddc"  # 百炼支持的模型，如 qwen-max, qwen-plus 等
+MODEL = "QuanLLM-v1.0-qm"  # 网关侧模型重定向名（上游为 qwen3-8b-7801b26b3ddc），大小写敏感
 ENABLE_THINKING = True            # 思考模式开关；若所用模型不支持思考模式下的工具调用，可改为 False
 
 
@@ -146,17 +147,23 @@ tools = [
 
 # ================= 流式请求封装 =================
 
+# 本会话 Token 用量累计（网关 usage 字段回填）
+SESSION_USAGE = {"prompt": 0, "completion": 0}
+
+
 def stream_request(messages, use_tools: bool = False) -> dict:
     """
     发起一次流式对话请求：
     - 实时打印思考过程（reasoning_content）与正式回答（content）
     - 增量累积 tool_calls 分片
+    - 通过 stream_options 让网关回传本轮 Token 用量并打印
     返回可追加进 messages 的 assistant 消息字典。
     """
     kwargs = dict(
         model=MODEL,
         messages=messages,
         stream=True,
+        stream_options={"include_usage": True},  # 让网关在最后一个分片回传 usage
         extra_body={"enable_thinking": ENABLE_THINKING},
     )
     if use_tools:
@@ -169,8 +176,12 @@ def stream_request(messages, use_tools: bool = False) -> dict:
     tool_call_slots = {}  # index -> {"id": str, "name": str, "arguments": str}
     thinking_started = False
     answer_started = False
+    usage_info = None
 
     for chunk in stream:
+        # 用量分片（通常为最后一个 chunk，此时 choices 为空）
+        if getattr(chunk, "usage", None):
+            usage_info = chunk.usage
         if not chunk.choices:
             continue
         delta = chunk.choices[0].delta
@@ -206,6 +217,21 @@ def stream_request(messages, use_tools: bool = False) -> dict:
                         slot["arguments"] += tc.function.arguments
 
     print()  # 流式输出结束后换行
+
+    # 打印本轮 Token 用量并累计到会话级
+    if usage_info:
+        prompt = usage_info.prompt_tokens or 0
+        completion = usage_info.completion_tokens or 0
+        SESSION_USAGE["prompt"] += prompt
+        SESSION_USAGE["completion"] += completion
+        print(f"[Token] 本轮 输入 {prompt} · 输出 {completion}"
+              f" ｜ 本会话累计 输入 {SESSION_USAGE['prompt']} · 输出 {SESSION_USAGE['completion']}")
+        log_event({
+            "type": "usage",
+            "time": datetime.now().isoformat(timespec="seconds"),
+            "prompt_tokens": prompt,
+            "completion_tokens": completion,
+        })
 
     content = "".join(content_parts)
     assistant_message = {"role": "assistant", "content": content or None}
@@ -289,6 +315,7 @@ def log_event(event: dict):
 
 def new_session():
     """开始一段新会话：写入 session_start 标记并返回初始 messages。"""
+    SESSION_USAGE["prompt"] = SESSION_USAGE["completion"] = 0  # 新会话用量归零
     log_event({
         "type": "session_start",
         "time": datetime.now().isoformat(timespec="seconds"),
@@ -411,7 +438,11 @@ def main():
         except Exception as e:
             # 请求失败时移除这条用户消息，避免历史里留下没有回应的一轮
             messages.pop()
-            print(f"[请求出错] {e}")
+            msg = str(e)
+            if "insufficient_user_quota" in msg or "429" in msg:
+                print("[额度已用完] 当前 API Key 的额度已耗尽，请联系发放方充值或申请追加额度。")
+            else:
+                print(f"[请求出错] {e}")
         print()
 
 

@@ -169,8 +169,7 @@ USAGE_STATS_FILE = os.path.join(base_dir(), "usage_stats.json")
 def bump_lifetime_usage(prompt: int, completion: int) -> dict:
     """把本轮用量累加进当前 Key 的本机持久化累计，并返回该 Key 的累计记录。
 
-    注意：网关不向 sk-token 开放自助用量查询，这里统计的是本机自首次使用以来的
-    累计值；该 Key 在其他设备/工具上的用量不计入。
+    本机文件只统计 INPUT/OUTPUT Token 数；Key 的权威额度数据以网关查询为准。
     """
     try:
         with open(USAGE_STATS_FILE, "r", encoding="utf-8") as f:
@@ -191,6 +190,38 @@ def bump_lifetime_usage(prompt: int, completion: int) -> dict:
     except OSError:
         pass  # 写失败不影响对话
     return entry
+
+
+def query_token_quota() -> dict:
+    """查询当前 Key 在网关侧的额度用量（new-api 的 /api/usage/token/ 接口，
+    统计自 Key 创建以来的全部消耗，含其他设备；失败时返回 None，不影响对话）。"""
+    import urllib.request
+    base = load_base_url()
+    root = base[:-3] if base.endswith("/v1") else base  # 去掉 /v1 得到网关根地址
+    req = urllib.request.Request(
+        root + "/api/usage/token/",
+        headers={"Authorization": f"Bearer {API_KEY}", "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        if data.get("code") or data.get("success"):
+            return data.get("data") or {}
+    except Exception:
+        pass
+    return None
+
+
+def format_quota(data: dict) -> str:
+    """把网关额度数据格式化成一行展示文本。"""
+    if not data:
+        return ""
+    used = data.get("total_used", 0)
+    if data.get("unlimited_quota"):
+        return f"已用额度 {used}（不限总额）"
+    granted = data.get("total_granted", 0)
+    available = data.get("total_available", granted - used)
+    return f"已用额度 {used} / 总额 {granted}（剩余 {available}）"
 
 
 def stream_request(messages, use_tools: bool = False) -> dict:
@@ -271,6 +302,9 @@ def stream_request(messages, use_tools: bool = False) -> dict:
               f" ｜ 本会话累计 输入 {SESSION_USAGE['prompt']} · 输出 {SESSION_USAGE['completion']}"
               f" ｜ 本机累计 输入 {lifetime['prompt']} · 输出 {lifetime['completion']}"
               f"（自 {lifetime['since'][:10]} 起）")
+        quota_text = format_quota(query_token_quota())
+        if quota_text:
+            print(f"[额度] 网关累计 {quota_text}")
         log_event({
             "type": "usage",
             "time": datetime.now().isoformat(timespec="seconds"),
@@ -437,7 +471,13 @@ def main():
     messages = new_session()
     print("QuanLLM-qm · 量子力学专家模型 CLI（流式 + 思考模式 + SymPy 工具）")
     print("输入问题进行对话；:sessions 查看历史会话，:load [编号] 恢复会话，:clear 清空上下文，:quit 退出。")
-    print(f"历史记录保存在 {HISTORY_FILE}\n")
+    print(f"历史记录保存在 {HISTORY_FILE}")
+    quota_data = query_token_quota()
+    if quota_data:
+        name = quota_data.get("name") or ""
+        quota_text = format_quota(quota_data)
+        print(f"[额度] Key「{name}」{quota_text}（网关统计，自创建起）")
+    print()
 
     while True:
         try:

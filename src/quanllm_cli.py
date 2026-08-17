@@ -1,6 +1,16 @@
 import base64
 import hashlib
 
+# 行编辑支持：↑/↓ 调出历史输入，←/→ 移动光标，任意位置退格/删除
+# Unix/macOS 用内置 readline；Windows 用 pyreadline3（打包时已包含）
+try:
+    import readline
+except ImportError:
+    try:
+        import pyreadline3 as readline
+    except ImportError:
+        readline = None
+
 from openai import OpenAI
 import sympy as sp
 import json
@@ -347,6 +357,28 @@ SYSTEM_PROMPT = (
 # 会话历史持久化文件（JSONL，每行一条记录），保存在程序同目录
 HISTORY_FILE = os.path.join(base_dir(), "chat_history.jsonl")
 
+# 键盘输入历史文件（↑/↓ 调出），同样保存在程序同目录，最多保留 1000 条
+INPUT_HISTORY_FILE = os.path.join(base_dir(), ".input_history")
+
+
+def init_input_history():
+    """加载历史输入，使 ↑/↓ 可以调出上次运行时的输入；退出时自动保存。"""
+    if readline is None:
+        return
+    try:
+        readline.read_history_file(INPUT_HISTORY_FILE)
+    except OSError:
+        pass  # 首次运行时文件不存在，忽略
+    readline.set_history_length(1000)
+
+    import atexit
+    def _save():
+        try:
+            readline.write_history_file(INPUT_HISTORY_FILE)
+        except OSError:
+            pass
+    atexit.register(_save)
+
 
 def log_event(event: dict):
     """向历史文件追加一条 JSONL 记录（消息或会话标记）。"""
@@ -433,6 +465,7 @@ def print_sessions():
 
 
 def main():
+    init_input_history()
     messages = new_session()
     print("QuanLLM-qm · 量子力学专家模型 CLI（流式 + 思考模式 + SymPy 工具）")
     print("输入问题进行对话；:sessions 查看历史会话，:load [编号] 恢复会话，:clear 清空上下文，:quit 退出。")

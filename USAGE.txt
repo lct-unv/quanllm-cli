@@ -17,12 +17,15 @@ QuanLLM CLI 使用说明
    :clear         清空上下文，开始新会话
    :quit          退出
 
-4. 对话历史会自动保存在程序同目录的 chat_history.jsonl 中。
+4. 行编辑：↑ / ↓ 调出历史输入（重启后仍保留，存在 .input_history），
+   ← / → 移动光标，可在任意位置退格或删除。
 
-5. 每轮回答后会显示 Token 用量：本轮、本会话累计、本机累计（该 Key 在本设备上
+5. 对话历史会自动保存在程序同目录的 chat_history.jsonl 中。
+
+6. 每轮回答后会显示 Token 用量：本轮、本会话累计、本机累计（该 Key 在本设备上
    自首次使用起的输入/输出 Token 总数，记录在程序同目录的 usage_stats.json 中）。
 
-6. APIKEY 与 chat_history.jsonl 都必须与程序放在同一目录下。
+7. APIKEY 与 chat_history.jsonl 都必须与程序放在同一目录下。
 
 
 QuanLLM CLI — Instructions
@@ -46,12 +49,16 @@ QuanLLM CLI — Instructions
    :clear         clear the context and start a new session
    :quit          exit
 
-4. Conversation history is automatically saved to chat_history.jsonl
+4. Line editing: ↑ / ↓ recall previous inputs (kept across restarts in
+   .input_history); ← / → move the cursor so you can backspace or delete
+   at any position.
+
+5. Conversation history is automatically saved to chat_history.jsonl
    in the same directory as the program.
 
-5. Token usage is shown after each reply: this round, session totals,
+6. Token usage is shown after each reply: this round, session totals,
    and machine totals (this key's input/output tokens on this device
    since first use, recorded in usage_stats.json next to the program).
 
-6. Both APIKEY and chat_history.jsonl must stay in the same directory
+7. Both APIKEY and chat_history.jsonl must stay in the same directory
    as the program.

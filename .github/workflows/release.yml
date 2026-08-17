@@ -42,7 +42,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install openai sympy pyinstaller
+        run: pip install openai sympy pyinstaller "pyreadline3; sys_platform == 'win32'"
 
       - name: Build executable
         run: pyinstaller --onefile --name quanllm-cli --clean --noconfirm src/quanllm_cli.py

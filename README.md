@@ -7,6 +7,7 @@
 - 流式输出，思考模式（思维链）实时可见
 - SymPy 符号计算工具调用（求导、积分、解方程，结果精确不口算）
 - 多轮对话，历史会话自动持久化，可查看 / 恢复
+- 行编辑：↑ / ↓ 调出历史输入（跨重启保留），← / → 移动光标，任意位置退格 / 删除
 - 每轮实时显示 Token 用量：本轮 / 本会话累计 / 本机累计（按 API Key 分别统计，持久化在 `usage_stats.json`）
 - API Key 额度耗尽（429）时给出明确中文提示
 - 网关地址固定内置、源码无明文，不提供切换入口
@@ -42,6 +43,7 @@
 
 ```bash
 pip install openai sympy
+pip install pyreadline3   # 仅 Windows 需要（行编辑支持）
 python src/quanllm_cli.py          # 直接运行
 
 pip install pyinstaller
@@ -68,6 +70,7 @@ The self-adaptive command-line client for QuanLLM-qm, the quantum mechanics expe
 - Streaming output with visible thinking mode (chain of thought)
 - SymPy symbolic-computation tool calls (derivatives, integrals, equation solving — exact results, no mental math)
 - Multi-turn conversation with automatic persistent history you can list / restore
+- Line editing: ↑ / ↓ recall previous inputs (kept across restarts), ← / → move the cursor, backspace / delete at any position
 - Real-time token usage after each reply: this round / session totals / machine totals (counted per API key, persisted in `usage_stats.json`)
 - Clear Chinese error message when the API key runs out of quota (HTTP 429)
 - Gateway address fixed at build time, no plaintext in the source, no override option
@@ -103,6 +106,7 @@ No key is embedded in the program; the key is only read from the `APIKEY` file i
 
 ```bash
 pip install openai sympy
+pip install pyreadline3   # Windows only (line-editing support)
 python src/quanllm_cli.py          # run directly
 
 pip install pyinstaller

@@ -40,7 +40,7 @@ jobs:
           pkg="quanllm-cli-${{ matrix.target }}"
           mkdir -p "release/$pkg"
           cp "dist/${{ matrix.bin }}" "release/$pkg/"
-          cp APIKEY.example 使用说明.txt "release/$pkg/"
+          cp APIKEY.example USAGE.txt "release/$pkg/"
           cd release
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             # Windows 运行器的 git-bash 没有 zip，GNU tar 也不支持 zip 格式，改用 PowerShell

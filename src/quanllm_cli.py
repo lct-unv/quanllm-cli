@@ -28,16 +28,31 @@ def load_api_key() -> str:
     with open(key_path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            if line and not line.startswith("#"):
+            if line and not line.startswith("#") and not line.startswith("BASE_URL="):
                 return line
     print(f"[API Key 为空] 请将 API Key 写入文件：{key_path}（单独一行）")
     sys.exit(1)
 
 
+def load_base_url() -> str:
+    """网关地址：默认内置（混淆存储，避免源码明文暴露）；
+    如需切换网关，可在 APIKEY 文件中加一行 BASE_URL=http://... 覆盖。"""
+    key_path = os.path.join(base_dir(), "APIKEY")
+    try:
+        with open(key_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("BASE_URL="):
+                    return line[len("BASE_URL="):].strip()
+    except OSError:
+        pass
+    import base64
+    return base64.b64decode("aHR0cDovLzQ3Ljk3LjQ2Ljc0OjMwMDAvdjE=").decode("ascii")
+
+
 client = OpenAI(
     api_key=load_api_key(),
-    #base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
-    base_url="http://47.97.46.74:3000/v1"
+    base_url=load_base_url()
 )
 
 MODEL = "QuanLLM-v1.0-qm"  # 网关侧模型重定向名（上游为 qwen3-8b-7801b26b3ddc），大小写敏感

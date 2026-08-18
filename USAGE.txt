@@ -12,6 +12,7 @@ QuanLLM CLI 使用说明
       或先在终端执行 xattr -d com.apple.quarantine quanllm-cli）
 
 3. 对话指令：
+   :paste         进入多行输入模式；粘贴完成后单独输入 :send 提交，:cancel 取消
    :sessions      查看历史会话列表
    :load [编号]   恢复最近一次 / 指定编号的会话
    :clear         清空上下文，开始新会话
@@ -22,8 +23,10 @@ QuanLLM CLI 使用说明
 
 5. 对话历史会自动保存在程序同目录的 chat_history.jsonl 中。
 
-6. 每轮回答后会显示 Token 用量：本轮、本会话累计、本机累计（该 Key 在本设备上
+6. 最终答案结束后统一显示 Token 用量：本轮全部请求、本会话累计、本机累计（该 Key 在本设备上
    自首次使用起的输入/输出 Token 总数，记录在程序同目录的 usage_stats.json 中）。
+   每个问题会默认生成工具增强初稿并执行不可关闭的第二次审核，因此至少产生两次模型请求，
+   CLI 会累计每次请求的实际 Token 用量，并在终稿之后一次性显示。
 
 7. APIKEY 与 chat_history.jsonl 都必须与程序放在同一目录下。
 
@@ -44,6 +47,7 @@ QuanLLM CLI — Instructions
       xattr -d com.apple.quarantine quanllm-cli  in a terminal first.)
 
 3. Session commands:
+   :paste         enter multi-line input mode; use :send on its own line to submit, or :cancel
    :sessions      list all saved sessions
    :load [N]      restore the most recent session / session number N
    :clear         clear the context and start a new session
@@ -56,9 +60,12 @@ QuanLLM CLI — Instructions
 5. Conversation history is automatically saved to chat_history.jsonl
    in the same directory as the program.
 
-6. Token usage is shown after each reply: this round, session totals,
+6. Consolidated Token usage is shown after the final answer: all requests in this turn, session totals,
    and machine totals (this key's input/output tokens on this device
    since first use, recorded in usage_stats.json next to the program).
+   Every question generates a tool-enhanced draft and then runs a mandatory
+   second-pass review, so at least two model requests are made. Actual usage
+   for every request is accumulated and shown once after the final answer.
 
 7. Both APIKEY and chat_history.jsonl must stay in the same directory
    as the program.

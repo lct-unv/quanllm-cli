@@ -12,6 +12,7 @@ QuanLLM CLI 使用说明
       或先在终端执行 xattr -d com.apple.quarantine quanllm-cli）
 
 3. 对话指令：
+   :again         将最近一次用户问题作为新一轮再次运行
    :paste         进入多行输入模式；粘贴完成后单独输入 :send 提交，:cancel 取消
    :sessions      查看历史会话列表
    :load [编号]   恢复最近一次 / 指定编号的会话
@@ -25,8 +26,13 @@ QuanLLM CLI 使用说明
 
 6. 最终答案结束后统一显示 Token 用量：本轮全部请求、本会话累计、本机累计（该 Key 在本设备上
    自首次使用起的输入/输出 Token 总数，记录在程序同目录的 usage_stats.json 中）。
-   每个问题会默认生成工具增强初稿并执行不可关闭的第二次审核，因此至少产生两次模型请求，
-   CLI 会累计每次请求的实际 Token 用量，并在终稿之后一次性显示。
+   每个问题先用一次只看原问题的模型请求建立任务自适应参考解，只包含核心结论、必要推导、用户要求、禁用错误说法和具体工具核验任务。参考解不进入初稿或首次强制审核，只供后置咨询判卷使用。
+   固定流程为“初稿 → 首次强制审核 → 咨询判卷”；可靠重大意见最多触发一次定向重写，随后无条件交付，不再反复重写和判卷。每条争议均只请求一次隔离模型裁决。CLI 会累计每次请求的
+   实际 Token 用量，并在终稿之后一次性显示。题型、回答深度、公式损坏和工具需求只做一次隔离语义分类；
+   有争议的措辞再逐条做一次中性语义裁决。程序只机械校验结构和逐字引文，不用自然语言正则、题目关键词或题型事实硬编码作语义裁决。
+   结构化检查使用 JSON 输出模式，并记录不含正文的结束原因和字符数。参考解、判卷和逐条裁决均为咨询型：可解析意见用于修订，坏字段只在内部记录并跳过；任一咨询环节不可用都不阻止已有答案交付。
+   轻微问题不触发定向重写，交付时最多披露两项简短提醒。公式层级或阶次、分母、量纲、矩阵或算符运算、本征问题、推导前提、适用范围和最终结论等问题均作为重大问题，触发唯一一次定向修订。
+   请求分类、独立参考解、初稿、审核、判卷和逐条裁决的每次原始思考过程都会按阶段显示；仅隐藏程序调试日志与工具参数/返回。
 
 7. APIKEY 与 chat_history.jsonl 都必须与程序放在同一目录下。
 
@@ -47,6 +53,7 @@ QuanLLM CLI — Instructions
       xattr -d com.apple.quarantine quanllm-cli  in a terminal first.)
 
 3. Session commands:
+   :again         rerun the most recent user question as a new turn
    :paste         enter multi-line input mode; use :send on its own line to submit, or :cancel
    :sessions      list all saved sessions
    :load [N]      restore the most recent session / session number N
@@ -63,9 +70,12 @@ QuanLLM CLI — Instructions
 6. Consolidated Token usage is shown after the final answer: all requests in this turn, session totals,
    and machine totals (this key's input/output tokens on this device
    since first use, recorded in usage_stats.json next to the program).
-   Every question generates a tool-enhanced draft and then runs a mandatory
-   second-pass review, so at least two model requests are made. Actual usage
-   for every request is accumulated and shown once after the final answer.
+   Every question first uses one model request that sees only the original question to build a task-adaptive reference solution containing core conclusions, necessary derivations, user requirements, forbidden claims, and concrete tool tasks. The reference is isolated from drafting and the first mandatory review and is used only by advisory verification.
+   The fixed pipeline is draft → mandatory review → advisory verification. Reliable major advice can trigger at most one targeted rewrite, after which an answer is always delivered. Each disputed issue receives one isolated adjudication. Request type, answer depth, damaged-formula status, and tool need are decided by one isolated semantic
+   classifier. Disputed wording is then checked by isolated neutral adjudication. Code performs only structural and verbatim-evidence checks, not semantic decisions based on natural-language regex, topic keywords, or hardcoded subject facts.
+   Structured checkpoints request JSON output and store only non-content finish metadata. Reference generation, verification, and adjudication are advisory throughout: malformed entries are skipped and recorded internally, and any unavailable advisory stage never prevents delivery of an existing answer.
+   Minor issues do not trigger targeted rewriting and at most two are disclosed. Formula level/order, denominators, dimensions, matrix/operator operations, eigenproblems, derivation premises, applicability, and final conclusions are treated as major and trigger the single targeted rewrite.
+   Raw reasoning from classification, blueprint generation, drafting, review, verification, and every adjudication is shown inside clear stage separators; program diagnostics and tool parameters/results remain hidden. Usage is shown once after the final answer.
 
 7. Both APIKEY and chat_history.jsonl must stay in the same directory
    as the program.
